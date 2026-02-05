@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>ExifImg</title>
+  <link rel="stylesheet" href="font.css">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="image/favicon.svg" type="image/x-icon">
+</head>
+
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="mark" aria-hidden="true"><img src="image/logo.svg"></div>
+        <div>
+          <h1>ExifImg</h1>
+          <p id="subTitle">ابزار مینیمال برای بررسی EXIF و اطلاعات تصویر</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" id="pickBtn"><img src="icons/folder-open.svg" class="icon" alt="icon copy"><span id="pickTxt">انتخاب فایل</span></button>
+        <button class="btn" id="langBtn"><img src="icons/languages-world.svg" class="icon" alt="langBtn"><span id="langTxt">EN</span></button>
+        <a href="https://exifimg.ir/support"><button class="btn" id="supportbtn"><img src="icons/user-headset.svg" class="icon" alt="Support"><span id="supportText">Support</span></button></a>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <div class="hd">
+          <div class="title">
+            <b id="dropTitle">فایل‌هاتو بنداز اینجا</b>
+            <span id="dropHint">Drag & Drop یا انتخاب فایل — پشتیبانی از ۲۶ فرمت</span>
+          </div>
+          <span class="badge" id="countBadge">0 files</span>
+        </div>
+
+        <div class="bd">
+          <div class="drop" id="dropZone" role="button" tabindex="0" aria-label="Drop zone">
+            <div class="big" id="dropBig">اینجا رها کن</div>
+            <div class="small" id="dropSmall">
+              فایل‌ها فقط روی دستگاه خودت پردازش می‌شن (هیچ آپلودی انجام نمی‌شه).
+              برای بعضی فرمت‌ها ممکنه مرورگر نتونه پیش‌نمایش ، ولی اطلاعات کلی و هش رو می‌گیری.
+            </div>
+            <div class="pillRow" id="formatPills"></div>
+          </div>
+          <input class="fileInput" id="fileInput" type="file" multiple />
+
+          <div style="height:12px"></div>
+
+          <div class="list" id="fileList" aria-label="File list"></div>
+        </div>
+      </section>
+      <aside class="card">
+        <div class="hd">
+          <div class="title">
+            <b id="inspectorTitle">Inspector</b>
+            <span id="inspectorHint">یکی از فایل‌ها رو انتخاب کن</span>
+          </div>
+          <div class="rowBtns">
+            <button class="btn" id="copyJsonBtn" disabled><img src="icons/copy.svg" class="icon" alt="copy json"><span id="copyJsonTxt">کپی JSON</span></button>
+            <button class="btn" id="downloadBtn" disabled><img src="icons/download.svg" class="icon" alt="download"><span id="downloadTxt">دانلود گزارش</span></button>
+          </div>
+        </div>
+        <div class="bd">
+          <div class="preview">
+            <div class="previewBox" id="previewBox">
+              <div class="hint" id="previewHint">پیش‌نمایش اینجا میاد</div>
+            </div>
+
+            <div class="card" style="box-shadow:none;background:transparent;border:none;">
+              <div class="bd" style="padding:0;">
+                <table id="metaTable" aria-label="Metadata table"></table>
+                <div class="hint" id="noteHint"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const SUPPORTED_EXT = [
+    "jpg","jpeg","jfif","jpe",
+    "png","webp","gif","bmp",
+    "tif","tiff","svg","ico",
+    "avif","heic","heif","jxl",
+    "psd","dng","cr2","cr3",
+    "nef","arw","raf","orf",
+    "rw2","pef","sr2"
+  ];
+  const SUPPORTED_EXT_26 = SUPPORTED_EXT.filter(x => x !== "sr2");
+
+  const I18N = {
+    fa: {
+      dir:"rtl",
+      subTitle:"ابزار مینیمال برای بررسی EXIF و اطلاعات تصویر",
+      pick:"انتخاب فایل",
+      dropTitle:"فایل‌هاتو بنداز اینجا",
+      dropHint:"Drag & Drop یا انتخاب فایل — پشتیبانی از ۲۶ فرمت",
+      dropBig:"اینجا رها کن",
+      dropSmall:"فایل‌ها فقط روی دستگاه خودت پردازش می‌شن (هیچ آپلودی انجام نمی‌شه). برای بعضی فرمت‌ها ممکنه مرورگر نتونه پیش‌نمایش بده، ولی اطلاعات کلی و هش رو می‌گیری.",
+      inspectorTitle:"Inspector",
+      inspectorHint:"یکی از فایل‌ها رو انتخاب کن",
+      copyJson:"کپی JSON",
+      download:"دانلود گزارش",
+      previewPlaceholder:"پیش‌نمایش اینجا میاد",
+      files:(n)=> `${n} فایل`,
+      supported:"پشتیبانی",
+      ok:"OK",
+      limited:"محدود",
+      noPreview:"بدون پیش‌نمایش",
+      key_general:"عمومی",
+      key_image:"تصویر",
+      key_exif:"EXIF",
+      key_warn:"یادداشت",
+      note_ok:"اگر فایل JPEG/TIFF باشه، EXIF واقعی از داخل فایل خونده می‌شه.",
+      note_limited:"بعضی فرمت‌ها (مثل HEIC/AVIF/JXL/RAW) ممکنه تو مرورگر پیش‌نمایش/ابعاد ندن. این محدودیت مرورگره، نه کد.",
+      toastCopied:"کپی شد ✅",
+      toastNoData:"چیزی برای کپی نیست 😅",
+      toastDownloaded:"گزارش دانلود شد ✅",
+      toastUnsupported:"این فرمت داخل لیست ۲۶تایی نیست ❌",
+      toastReadFail:"خواندن فایل مشکل خورد 😬",
+      lbl_name:"نام",
+      lbl_ext:"پسوند",
+      lbl_mime:"MIME",
+      lbl_size:"حجم",
+      lbl_last:"آخرین تغییر",
+      lbl_sha:"SHA-256",
+      lbl_width:"عرض",
+      lbl_height:"ارتفاع",
+      lbl_ratio:"نسبت",
+      lbl_orientation:"Orientation",
+      lbl_make:"Make",
+      lbl_model:"Model",
+      lbl_lens:"Lens",
+      lbl_dt:"DateTimeOriginal",
+      lbl_iso:"ISO",
+      lbl_exposure:"ExposureTime",
+      lbl_fnumber:"FNumber",
+      lbl_focal:"FocalLength",
+      lbl_gps:"GPS",
+    },
+    en: {
+      dir:"ltr",
+      subTitle:"Minimal tool to inspect EXIF & image properties",
+      pick:"Pick files",
+      dropTitle:"Drop your files here",
+      dropHint:"Drag & Drop or pick — supports 26 formats",
+      dropBig:"Drop here",
+      dropSmall:"Everything is processed locally (no uploads). Some formats may not preview in your browser, but you’ll still get file info + hash.",
+      inspectorTitle:"Inspector",
+      inspectorHint:"Select a file",
+      copyJson:"Copy JSON",
+      download:"Download report",
+      previewPlaceholder:"Preview will appear here",
+      files:(n)=> `${n} files`,
+      supported:"Supported",
+      ok:"OK",
+      limited:"Limited",
+      noPreview:"No preview",
+      key_general:"General",
+      key_image:"Image",
+      key_exif:"EXIF",
+      key_warn:"Note",
+      note_ok:"For JPEG/TIFF, real EXIF is parsed directly from the file bytes.",
+      note_limited:"Some formats (HEIC/AVIF/JXL/RAW) might not preview/return dimensions in the browser. That’s a browser limitation.",
+      toastCopied:"Copied ✅",
+      toastNoData:"Nothing to copy 😅",
+      toastDownloaded:"Report downloaded ✅",
+      toastUnsupported:"Not in the 26-format list ❌",
+      toastReadFail:"File read failed 😬",
+      lbl_name:"Name",
+      lbl_ext:"Extension",
+      lbl_mime:"MIME",
+      lbl_size:"Size",
+      lbl_last:"Last modified",
+      lbl_sha:"SHA-256",
+      lbl_width:"Width",
+      lbl_height:"Height",
+      lbl_ratio:"Aspect",
+      lbl_orientation:"Orientation",
+      lbl_make:"Make",
+      lbl_model:"Model",
+      lbl_lens:"Lens",
+      lbl_dt:"DateTimeOriginal",
+      lbl_iso:"ISO",
+      lbl_exposure:"ExposureTime",
+      lbl_fnumber:"FNumber",
+      lbl_focal:"FocalLength",
+      lbl_gps:"GPS",
+    }
+  };
+
+  let lang = "fa";
+  let filesState = [];
+  let selectedIndex = -1;
+
+  const $ = (s) => document.querySelector(s);
+  const subTitle = $("#subTitle");
+  const pickBtn = $("#pickBtn");
+  const pickTxt = $("#pickTxt");
+  const langBtn = $("#langBtn");
+  const langTxt = $("#langTxt");
+  const dropTitle = $("#dropTitle");
+  const dropHint = $("#dropHint");
+  const dropBig = $("#dropBig");
+  const dropSmall = $("#dropSmall");
+  const dropZone = $("#dropZone");
+  const fileInput = $("#fileInput");
+  const formatPills = $("#formatPills");
+  const fileList = $("#fileList");
+  const countBadge = $("#countBadge");
+
+  const inspectorTitle = $("#inspectorTitle");
+  const inspectorHint = $("#inspectorHint");
+  const previewBox = $("#previewBox");
+  const previewHint = $("#previewHint");
+  const metaTable = $("#metaTable");
+  const noteHint = $("#noteHint");
+  const copyJsonBtn = $("#copyJsonBtn");
+  const downloadBtn = $("#downloadBtn");
+  const copyJsonTxt = $("#copyJsonTxt");
+  const downloadTxt = $("#downloadTxt");
+  const toast = $("#toast");
+
+  const LANG_KEY = "exifimg_lang";
+
+  function loadSavedLang() {
+    const v = localStorage.getItem(LANG_KEY);
+    return (v === "fa" || v === "en") ? v : "fa";
+  }
+
+  function saveLang(v) {
+    localStorage.setItem(LANG_KEY, v);
+  }
+
+  const t = (k, ...args) => {
+    const v = I18N[lang][k];
+    return (typeof v === "function") ? v(...args) : v;
+  };
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=> toast.classList.remove("show"), 1800);
+  }
+
+  function fmtBytes(n){
+    const u = ["B","KB","MB","GB"];
+    let i=0, x=n;
+    while(x>=1024 && i<u.length-1){x/=1024;i++;}
+    return `${x.toFixed(x>=10||i===0?0:1)} ${u[i]}`;
+  }
+
+  function extOf(name){
+    const m = /\.([a-z0-9]+)$/i.exec(name || "");
+    return m ? m[1].toLowerCase() : "";
+  }
+
+  function isSupportedExt(ext){
+    return SUPPORTED_EXT_26.includes(ext);
+  }
+
+  function setLang(next){
+    lang = next;
+    saveLang(lang);
+    document.documentElement.lang = lang === "fa" ? "fa" : "en";
+    document.documentElement.dir = I18N[lang].dir;
+    langTxt.textContent = (lang === "fa") ? "EN" : "FA";
+    pickTxt.textContent = t("pick");
+    subTitle.textContent = t("subTitle");
+    dropTitle.textContent = t("dropTitle");
+    dropHint.textContent = t("dropHint");
+    dropBig.textContent = t("dropBig");
+    dropSmall.textContent = t("dropSmall");
+    inspectorTitle.textContent = t("inspectorTitle");
+    inspectorHint.textContent = t("inspectorHint");
+    previewHint.textContent = t("previewPlaceholder");
+    copyJsonTxt.textContent = t("copyJson");
+    downloadTxt.textContent = t("download");
+    noteHint.textContent = filesState.length ? t("note_limited") : "";
+    renderPills();
+    renderList();
+    renderSelected();
+  }
+
+  function renderPills(){
+    formatPills.innerHTML = "";
+    const items = SUPPORTED_EXT_26.slice().sort();
+    for(const x of items){
+      const s = document.createElement("span");
+      s.className = "pill";
+      s.textContent = x;
+      formatPills.appendChild(s);
+    }
+  }
+
+  function statusBadge(ext, ok, canPreview){
+    if(!ok) return `<span class="badge bad">${ext || "?"} • ${t("toastUnsupported").replace(" ❌","")}</span>`;
+    if(canPreview === true) return `<span class="badge ok">${ext} • ${t("ok")}</span>`;
+    if(canPreview === false) return `<span class="badge warn">${ext} • ${t("limited")}</span>`;
+    return `<span class="badge">${ext}</span>`;
+  }
+
+  function renderList(){
+    fileList.innerHTML = "";
+    countBadge.textContent = t("files", filesState.length);
+
+    filesState.forEach((it, idx) => {
+      const el = document.createElement("div");
+      el.className = "item";
+      el.dataset.idx = idx;
+
+      const thumb = document.createElement("div");
+      thumb.className = "thumb";
+      if(it.thumbUrl){
+        const img = document.createElement("img");
+        img.src = it.thumbUrl;
+        img.alt = "";
+        thumb.appendChild(img);
+      } else {
+        thumb.innerHTML = `<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${(it.ext||"?").toUpperCase()}</span>`;
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const top = document.createElement("div");
+      top.className = "top";
+
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = it.file.name;
+
+      const badgeWrap = document.createElement("div");
+      badgeWrap.innerHTML = statusBadge(it.ext, it.ok, it.canPreview);
+
+      top.appendChild(name);
+      top.appendChild(badgeWrap);
+
+      const sub = document.createElement("div");
+      sub.className = "sub";
+      sub.innerHTML = `
+        <span>${fmtBytes(it.file.size)}</span>
+        <span class="badge">${it.file.type || "unknown"}</span>
+      `;
+
+      meta.appendChild(top);
+      meta.appendChild(sub);
+
+      el.appendChild(thumb);
+      el.appendChild(meta);
+
+      el.addEventListener("click", () => selectIndex(idx));
+      fileList.appendChild(el);
+    });
+  }
+
+  function clearPreview(){
+    previewBox.innerHTML = `<div class="hint" id="previewHint">${t("previewPlaceholder")}</div>`;
+  }
+
+  function setPreviewFromUrl(url){
+    previewBox.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "";
+    previewBox.appendChild(img);
+  }
+
+  function row(k, v){
+    const tr = document.createElement("tr");
+    const tdK = document.createElement("td");
+    tdK.className = "k";
+    tdK.textContent = k;
+    const tdV = document.createElement("td");
+    tdV.className = "v";
+    tdV.textContent = (v === null || v === undefined || v === "") ? "—" : String(v);
+    tr.appendChild(tdK);
+    tr.appendChild(tdV);
+    return tr;
+  }
+
+  function renderSelected(){
+    metaTable.innerHTML = "";
+    if(selectedIndex < 0 || !filesState[selectedIndex]){
+      copyJsonBtn.disabled = true;
+      downloadBtn.disabled = true;
+      noteHint.textContent = "";
+      clearPreview();
+      return;
+    }
+
+    const it = filesState[selectedIndex];
+    const R = it.report || {};
+    copyJsonBtn.disabled = false;
+    downloadBtn.disabled = false;
+
+    if(it.thumbUrl) setPreviewFromUrl(it.thumbUrl);
+    else clearPreview();
+
+    metaTable.appendChild(row(t("key_general"), ""));
+    metaTable.appendChild(row(t("lbl_name"), R.name));
+    metaTable.appendChild(row(t("lbl_ext"), R.ext));
+    metaTable.appendChild(row(t("lbl_mime"), R.mime));
+    metaTable.appendChild(row(t("lbl_size"), R.sizeHuman));
+    metaTable.appendChild(row(t("lbl_last"), R.lastModified));
+    metaTable.appendChild(row(t("lbl_sha"), R.sha256));
+
+    metaTable.appendChild(row(t("key_image"), ""));
+    metaTable.appendChild(row(t("lbl_width"), R.width));
+    metaTable.appendChild(row(t("lbl_height"), R.height));
+    metaTable.appendChild(row(t("lbl_ratio"), R.aspect));
+
+    metaTable.appendChild(row(t("key_exif"), ""));
+    metaTable.appendChild(row(t("lbl_orientation"), R.exif?.Orientation));
+    metaTable.appendChild(row(t("lbl_make"), R.exif?.Make));
+    metaTable.appendChild(row(t("lbl_model"), R.exif?.Model));
+    metaTable.appendChild(row(t("lbl_lens"), R.exif?.LensModel));
+    metaTable.appendChild(row(t("lbl_dt"), R.exif?.DateTimeOriginal));
+    metaTable.appendChild(row(t("lbl_iso"), R.exif?.ISOSpeedRatings));
+    metaTable.appendChild(row(t("lbl_exposure"), R.exif?.ExposureTime));
+    metaTable.appendChild(row(t("lbl_fnumber"), R.exif?.FNumber));
+    metaTable.appendChild(row(t("lbl_focal"), R.exif?.FocalLength));
+    metaTable.appendChild(row(t("lbl_gps"), R.exif?.GPS));
+
+    noteHint.textContent = it.ok ? t("note_limited") : t("toastUnsupported");
+  }
+
+  function selectIndex(i){
+    selectedIndex = i;
+    renderSelected();
+  }
+
+  let coreLoaded = false;
+  let coreLoading = null;
+
+  function loadCore(){
+    if(coreLoaded) return Promise.resolve();
+    if(coreLoading) return coreLoading;
+
+    coreLoading = new Promise((resolve, reject)=>{
+      const s = document.createElement("script");
+      s.src = "./core.js";
+      s.onload = () => { coreLoaded = true; resolve(); };
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+
+    return coreLoading;
+  }
+
+  async function addFiles(fileListLike){
+    const arr = Array.from(fileListLike || []);
+    if(!arr.length) return;
+
+    for(const f of arr){
+      const ex = extOf(f.name);
+      if(!isSupportedExt(ex)){
+        showToast(t("toastUnsupported"));
+      }
+    }
+
+    await loadCore();
+
+    const res = await window.ExifImgCore.processFiles(arr);
+
+    if(res.readFails && res.readFails.length){
+      for(const _ of res.readFails) showToast(t("toastReadFail"));
+    }
+    if(res.unsupported && res.unsupported.length){
+      for(const _ of res.unsupported) showToast(t("toastUnsupported"));
+    }
+
+    for(const it of (res.items || [])){
+      filesState.push(it);
+    }
+
+    renderList();
+    if(selectedIndex < 0 && filesState.length){
+      selectIndex(0);
+    } else {
+      renderSelected();
+    }
+  }
+
+  async function copySelectedJSON(){
+    const it = filesState[selectedIndex];
+    if(!it?.report){ showToast(t("toastNoData")); return; }
+    const txt = JSON.stringify(it.report, null, 2);
+    try{
+      await navigator.clipboard.writeText(txt);
+      showToast(t("toastCopied"));
+    } catch(_e){
+      const ta = document.createElement("textarea");
+      ta.value = txt;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+      showToast(t("toastCopied"));
+    }
+  }
+
+  function downloadSelectedReport(){
+    const it = filesState[selectedIndex];
+    if(!it?.report){ showToast(t("toastNoData")); return; }
+    const txt = JSON.stringify(it.report, null, 2);
+    const blob = new Blob([txt], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = (it.report.name || "report") + ".json";
+    a.click();
+    setTimeout(()=> URL.revokeObjectURL(url), 500);
+    showToast(t("toastDownloaded"));
+  }
+
+  pickBtn.addEventListener("click", ()=> fileInput.click());
+  fileInput.addEventListener("change", (e)=> addFiles(e.target.files));
+
+  langBtn.addEventListener("click", ()=> setLang(lang === "fa" ? "en" : "fa"));
+  copyJsonBtn.addEventListener("click", copySelectedJSON);
+  downloadBtn.addEventListener("click", downloadSelectedReport);
+
+  ["dragenter","dragover"].forEach(ev=>{
+    dropZone.addEventListener(ev, (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add("dragover");
+    });
+  });
+  ["dragleave","drop"].forEach(ev=>{
+    dropZone.addEventListener(ev, (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove("dragover");
+    });
+  });
+  dropZone.addEventListener("drop", (e)=>{
+    const dt = e.dataTransfer;
+    if(dt?.files?.length) addFiles(dt.files);
+  });
+  dropZone.addEventListener("click", ()=> fileInput.click());
+  dropZone.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
+  renderPills();
+  setLang(loadSavedLang());
+  console.log("Supported 26 formats:", SUPPORTED_EXT_26);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+  @font-face {
+    font-family: 'Vazir Variable';
+    src: url('fonts/Vazir-Variable.woff2') format('woff2'),
+         url('fonts/Vazir-Variable.woff') format('woff');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+  }
+    @font-face {
+    font-family: 'euro';
+    src: url('fonts/UEFAEuro-HeavyExtended.woff2') format('woff2'),
+         url('fonts/UEFAEuro-HeavyExtended.woff') format('woff');
+    font-style: normal;
+    font-display: swap;
+  }

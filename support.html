@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Exifimg - Support</title>
+  <link rel="stylesheet" href="font.css">
+
+  <style>
+    :root{
+      --bg: #0b0d12;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.09);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.66);
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 18px 60px rgba(0,0,0,.45);
+      --shadow2: 0 16px 40px rgba(0,0,0,.28);
+
+      --radius: 18px;
+      --pad: clamp(14px, 2.2vw, 22px);
+      --gap: clamp(12px, 2vw, 18px);
+
+      --focus: rgba(255,255,255,.35);
+      --ok: rgba(120,255,170,.95);
+      --warn: rgba(255,200,120,.95);
+
+      --ease: cubic-bezier(.2,.85,.2,1);
+      --t: 260ms;
+    }
+
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f6f7fb;
+        --card: rgba(255,255,255,.75);
+        --card2: rgba(255,255,255,.92);
+        --text: rgba(10,12,18,.92);
+        --muted: rgba(10,12,18,.62);
+        --border: rgba(10,12,18,.10);
+        --shadow: 0 18px 60px rgba(10,12,18,.10);
+        --shadow2: 0 14px 34px rgba(10,12,18,.10);
+        --focus: rgba(10,12,18,.22);
+      }
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height: 100%; }
+
+    body{
+      margin: 0;
+      font-family: 'Vazir Variable', euro, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    a{ color: inherit; text-decoration: none; }
+    a:hover{ text-decoration: underline; text-underline-offset: 3px; }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: clamp(18px, 3.5vw, 38px);
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+    }
+
+    .shell{
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 10px);
+      background: linear-gradient(180deg, var(--card2), var(--card));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      overflow: hidden;
+
+      animation: shellIn 650ms var(--ease) both;
+    }
+
+    @keyframes shellIn{
+      from{ opacity:0; transform: translateY(14px) scale(.992); }
+      to{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    header{
+      padding: calc(var(--pad) + 6px) var(--pad);
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      gap: 6px;
+    }
+
+    .title{
+      margin: 0;
+      font-size: clamp(20px, 3.2vw, 30px);
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle{
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(13px, 1.8vw, 15px);
+    }
+
+    main{
+      padding: var(--pad);
+      display: grid;
+      gap: var(--gap);
+    }
+
+    /* ریسپانسیو واقعی: موبایل 1 ستون، تبلت/دسکتاپ 2 ستون */
+    .grid{
+      display: grid;
+      gap: var(--gap);
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+    @media (min-width: 720px){
+      .grid{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .card{
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(0,0,0,0.04);
+      padding: var(--pad);
+      position: relative;
+      overflow: hidden;
+
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+
+      transition:
+        transform var(--t) var(--ease),
+        box-shadow var(--t) var(--ease),
+        border-color var(--t) var(--ease),
+        background var(--t) var(--ease);
+
+      will-change: transform;
+      animation: cardIn 520ms var(--ease) both;
+    }
+
+    /* استگر خوشگل */
+    .card:nth-child(1){ animation-delay: 40ms; }
+    .card:nth-child(2){ animation-delay: 80ms; }
+    .card:nth-child(3){ animation-delay: 120ms; }
+    .card:nth-child(4){ animation-delay: 160ms; }
+
+    @keyframes cardIn{
+      from{ opacity:0; transform: translateY(10px); }
+      to{ opacity:1; transform: translateY(0); }
+    }
+
+    /* همه کارت‌ها هم‌قد (فقط در دسکتاپ) بدون اینکه موبایل بهم بریزه */
+    @media (min-width: 720px){
+      .card{
+        min-height: 220px; /* اگر خواستی بیشتر/کمترش کن */
+      }
+    }
+
+    /* افکت کره‌ای: نور نرم داخل کارت */
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(420px 180px at 18% 12%, rgba(120,180,255,.18), transparent 55%),
+        radial-gradient(420px 180px at 92% 74%, rgba(255,170,120,.14), transparent 60%);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity var(--t) var(--ease), transform var(--t) var(--ease);
+      pointer-events:none;
+    }
+
+    .card:hover,
+    .card:focus-within{
+      transform: translateY(-3px);
+      border-color: rgba(255,255,255,.22);
+      box-shadow: var(--shadow2);
+    }
+    .card:hover::before,
+    .card:focus-within::before{
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .top{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .label{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      user-select: none;
+      min-width: 0;
+    }
+
+    .icon{
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      flex: 0 0 auto;
+    }
+
+    .label span:last-child{
+      display: inline-block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 48ch;
+    }
+
+    .badge{
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,.06);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .badge.warn{ color: var(--warn); }
+    .badge.ok{ color: var(--ok); }
+
+    .content{
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      min-height: 0;
+    }
+
+    .value{
+      font-size: clamp(15px, 2vw, 17px);
+      word-break: break-word;
+    }
+
+    .mono{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 14px;
+      opacity: .95;
+    }
+
+    .ltr{
+      direction: ltr;
+      unicode-bidi: plaintext;
+      text-align: left;
+    }
+
+    /* روی دسکتاپ: لینک‌های خیلی بلند، یک خط و تمیز */
+    @media (min-width: 720px){
+      .value.line1{
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .hint{
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+    }
+
+    .hint{
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    .btn{
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      transition:
+        transform 180ms var(--ease),
+        background 180ms var(--ease),
+        border-color 180ms var(--ease);
+      user-select: none;
+    }
+
+    .btn:hover{ background: rgba(255,255,255,.10); transform: translateY(-1px); }
+    .btn:active{ transform: translateY(0px); }
+    .btn:focus-visible{
+      outline: 2px solid var(--focus);
+      outline-offset: 3px;
+    }
+
+    .btn[aria-disabled="true"]{
+      opacity: .55;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* موبایل خیلی کوچیک: دکمه‌ها فول‌ویدث و مرتب */
+    @media (max-width: 420px){
+      .actions{ display: grid; grid-template-columns: 1fr 1fr; }
+      .actions .btn{ justify-content: center; }
+      .label span:last-child{ max-width: 30ch; }
+    }
+
+    footer{
+      padding: var(--pad);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .pill{
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,.06);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .toast{
+      position: fixed;
+      inset-inline: 14px;
+      bottom: 14px;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .toast > div{
+      pointer-events: auto;
+      max-width: 560px;
+      width: fit-content;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--card2), var(--card));
+      box-shadow: var(--shadow);
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .toast.show > div{ opacity: 1; transform: translateY(0); }
+
+    .dot{
+      width: 10px; height: 10px;
+      border-radius: 999px;
+      background: var(--ok);
+      box-shadow: 0 0 0 6px rgba(120,255,170,.15);
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ transition: none !important; scroll-behavior: auto !important; }
+      .shell, .card{ animation: none !important; }
+    }
+
+    @media print{
+      body{ background: #fff; color: #000; }
+      .shell, .card, header, footer{ box-shadow: none !important; backdrop-filter: none !important; }
+      .btn, .toast{ display: none !important; }
+      a{ text-decoration: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <section class="shell" aria-label="اطلاعات ارتباط">
+      <header>
+        <h1 class="title">ارتباط</h1>
+        <p class="subtitle">هر جور راحت‌تری، از راه‌های زیر بهمون پیام بده.</p>
+      </header>
+
+      <main>
+        <div class="grid">
+
+          <!-- TELEGRAM -->
+          <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">📨</span>
+                <span>تلگرام</span>
+              </div>
+              <span class="badge warn">فعلاً در دسترس نیست</span>
+            </div>
+
+
+            <div class="content">
+              <div class="value mono ltr line1">@mmdparsa_dev</div>
+              <p class="hint">اگه وصل بود، معمولاً سریع‌تر جواب می‌دیـم 😉</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https://t.me/mmdparsa_dev" target="_blank" rel="noopener"
+                 aria-label="باز کردن تلگرام" aria-disabled="true">باز کردن</a>
+              <button class="btn" type="button" data-copy-text="@mmdparsa_dev" aria-label="کپی آیدی تلگرام">کپی</button>
+            </div>
+          </article>
+           <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">📨</span>
+                <span>بله</span>
+              </div>
+              <span class="badge ok">فعاله</span>
+            </div>
+
+
+            <div class="content">
+              <div class="value mono ltr line1">@mmdparsa_dev</div>
+              <p class="hint">جواب می‌دیم ولی دیرتر از تلگرام</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https://bale.ai/mmdparsa_dev" target="_blank" rel="noopener"
+                 aria-label="باز کردن " aria-disabled="false">باز کردن</a>
+              <button class="btn" type="button" data-copy-text="@mmdparsa_dev" aria-label="کپی آیدی">کپی</button>
+            </div>
+          </article>
+                     <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">📨</span>
+                <span>ایتا</span>
+              </div>
+              <span class="badge ok">فعاله</span>
+            </div>
+
+
+            <div class="content">
+              <div class="value mono ltr line1">@mmdparsa_dev</div>
+              <p class="hint">جواب می‌دیم ولی دیرتر از تلگرام</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https:///mmdparsa_dev" target="_blank" rel="noopener"
+                 aria-label="باز کردن " aria-disabled="false">باز کردن</a>
+              <button class="btn" type="button" data-copy-text="@mmdparsa_dev" aria-label="کپی آیدی">کپی</button>
+            </div>
+          </article>
+          <!-- EMAIL -->
+          <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">✉️</span>
+                <span>ایمیل</span>
+              </div>
+              <span class="badge warn">فعلاً در دسترس نیست</span>
+            </div>
+
+            <div class="content">
+              <div class="value mono ltr line1">info@EXIFimg.ir</div>
+              <p class="hint">برای همکاری، پیشنهاد، یا گزارش باگ این یکی خوبه.</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="mailto:info@EXIFimg.ir"
+                 aria-label="ارسال ایمیل" aria-disabled="true">ایمیل</a>
+              <button class="btn" type="button" data-copy-text="info@EXIFimg.ir" aria-label="کپی ایمیل">کپی</button>
+            </div>
+          </article>
+
+          <!-- GITHUB -->
+          <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">🐙</span>
+                <span>گیت‌هاب</span>
+              </div>
+              <span class="badge wran">در دسترس نیست</span>
+            </div>
+
+            <div class="content">
+              <div class="value mono ltr line1">github.com/mmdparsa-dev/EXIFimg.ir</div>
+              <p class="hint">کدها و پروژه‌ها همینجاست، راحت سر بزن 😄</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https://github.com/mmdparsa-dev/EXIFimg" target="_blank" rel="noopener"
+                 aria-label="باز کردن گیت‌هاب">باز کردن</a>
+              <button class="btn" type="button"
+                      data-copy-text="https://github.com/mmdparsa-dev/EXIFimg"
+                      aria-label="کپی لینک گیت‌هاب">کپی</button>
+            </div>
+          </article>
+
+          <!-- WEBSITE -->
+          <article class="card">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">🌐</span>
+                <span>وب‌سایت</span>
+              </div>
+              <span class="badge ok">فعاله</span>
+            </div>
+
+            <div class="content">
+              <div class="value mono ltr line1">EXIFimg.ir</div>
+              <p class="hint">فقط یه نگاه بنداز، گم نمی‌شی 😅</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https://EXIFimg.ir" target="_blank" rel="noopener"
+                 aria-label="باز کردن وب‌سایت">باز کردن</a>
+              <button class="btn" type="button" data-copy-text="https://EXIFimg.ir" aria-label="کپی لینک سایت">کپی</button>
+            </div>
+          </article>
+
+          <!-- PHONE (اگر خواستی باشه، می‌تونی جا به جا کنی) -->
+          <article class="card" style="grid-column: 1 / -1;">
+            <div class="top">
+              <div class="label">
+                <span class="icon" aria-hidden="true">📞</span>
+                <span>تلفن</span>
+              </div>
+              <span class="badge ok">فعاله</span>
+            </div>
+
+            <div class="content">
+              <div class="value mono ltr">+98 998 196 6204</div>
+              <p class="hint">اگه جواب ندادیم احتمالاً داریم باگ می‌زنیم 😄</p>
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="tel:+989981966204" aria-label="تماس">تماس</a>
+              <button class="btn" type="button" data-copy-text="+989981966204" aria-label="کپی شماره">کپی</button>
+            </div>
+          </article>
+
+        </div>
+      </main>
+
+      <footer>
+        <span class="pill">⏰ معمولاً از 15:00 تا 23:00 آنلاینیم</span>
+        <span class="pill">⚡ سریع‌ترین راه فعلی: تلفن</span>
+      </footer>
+    </section>
+  </div>
+
+  <div class="toast" aria-live="polite" aria-atomic="true" hidden>
+    <div><span class="dot" aria-hidden="true"></span><span id="toastText">کپی شد</span></div>
+  </div>
+
+  <script>
+    (function () {
+      const toast = document.querySelector(".toast");
+      const toastText = document.getElementById("toastText");
+      let toastTimer = null;
+
+      function showToast(message) {
+        toastText.textContent = message;
+        toast.hidden = false;
+        toast.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove("show");
+          setTimeout(() => (toast.hidden = true), 180);
+        }, 1400);
+      }
+
+      async function copyText(text) {
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return true;
+          }
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          ta.setAttribute("readonly", "");
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          return ok;
+        } catch {
+          return false;
+        }
+      }
+
+      document.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-copy-text]");
+        if (!btn) return;
+
+        const text = (btn.getAttribute("data-copy-text") || "").trim();
+        if (!text) return;
+
+        const ok = await copyText(text);
+        showToast(ok ? "کپی شد ✅" : "کپی نشد 😅");
+      });
+    })();
+  </script>
+</body>
+</html>
